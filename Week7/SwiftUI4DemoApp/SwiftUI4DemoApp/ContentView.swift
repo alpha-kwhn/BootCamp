@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct ContentView: View {
     @State private var previousNumbers = [3, 6, 9]
@@ -86,8 +87,90 @@ struct SheetView: View {
     }
 }
 
+struct ShareView: View {
+    private let url = URL(string: "https://likelion.net")!
+    private let photo = SharingPhoto(image: Image(systemName: "star.fill"), caption: "This is a star")
+    
+    var body: some View {
+        VStack {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "link.icloud")
+                    .font(.largeTitle)
+            }
+            //셰어링크는 SheetView를 포함하고 있음
+            //.presentationDetents([.medium, .large])
+            Divider()
+            
+            photo.image
+                .font(.largeTitle)
+            ShareLink(item: photo, subject: Text("Star Photo"), message: Text("Check it out!"), preview: SharingPhoto(photo.caption, image: photo.image))
+                .font(.largeTitle)
+                    
+            
+            Divider()
+        }
+    }
+}
+
+struct SharingPhoto: Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: \.image)
+    }
+    
+    public var image: Image
+    public var caption: String
+}
+
+struct Mains: View {
+    var body: some View {
+        NavigationStack {
+            List {
+                NavigationLink {
+                    ShareView()
+                } label: {
+                    Label("Share Link View ", systemImage: "square.and.arrow.up")
+                }
+                
+            }
+        }
+    }
+}
+
+struct PhotosUIView: View {
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var selectedImageData: Data? = nil
+    
+    var body: some View {
+        VStack {
+            if let selectedImageData,
+               let uiImage = UIImage(data: selectedImageData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 250, height: 250)
+            }
+            
+            PhotosPicker(
+                selection: $selectedItem,
+                matching: .images,
+                photoLibrary: .shared())
+            {
+                Text("Select a photo")
+            }
+            .onChange(of: selectedItem) { newItem in
+                Task {
+                    if let data = try? await
+                        newItem?.loadTransferable(type: Data.self) {
+                        selectedImageData = data
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        SheetView()
+        ShareView()
     }
 }
